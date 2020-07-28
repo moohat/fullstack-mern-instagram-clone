@@ -18,3 +18,13 @@
     margin: 10px auto;
 
 }
+
+.galery {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+.item {
+    padding-top: 15px;
+    width: 30%;
+}
