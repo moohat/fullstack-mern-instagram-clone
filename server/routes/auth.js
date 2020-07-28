@@ -4,13 +4,14 @@ const router = express.Router()
 const User = mongoose.model("User")
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
-const {JWT_SECRET} = require('../keys')
+const { JWT_SECRET } = require('../keys')
+const requireLogin = require('../middleware/requireLogin')
 
-router.get('/', async(req, res, next) => {
-    try{
-        res.send("hello routes from async await")
-    } catch(e){
-        next(e);
+router.get('/protected', requireLogin, async (req, res, next) => {
+    try {
+        res.json({ message: 'token berhasil didapat, selamat datang' })
+    } catch (error) {
+        res.send({ message: error })
     }
 })
 
@@ -39,59 +40,63 @@ router.get('/', async(req, res, next) => {
 //     .catch(err => {
 //         console.log(err);            
 //     })
-    
+
 // })
 
 //using async
-router.post('/signup', async(req, res) => {
-    try{
-        const {name, email, password} = req.body;
-    
-        const check = await User.findOne({email: email})
-        if(check){
-            return res.json({error: "email already exists"})
-        }else{
+router.post('/signup', async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+
+        const check = await User.findOne({ email: email })
+        if (check) {
+            return res.json({ error: "email already exists" })
+        } else {
             //compress password to bcrypt
-            const hashedPassword = await bcrypt.hash(password,12);
+            const hashedPassword = await bcrypt.hash(password, 12);
+
+            // req.user.password = undefined;
             const user = new User({
-                            email,
-                            password: hashedPassword,
-                            name
-                        });
-            const data = await user.save()
-            res.json({message: "succesfully insert data", data: data})
+                email,
+                password: hashedPassword,
+                name
+            });
+            const data = await user.save();
+
+            res.json({ message: "succesfully insert data", data: data })
         }
     }
-    catch(error){
+    catch (error) {
         console.log(error);
-        
+
     }
 })
 
-router.post('/signin', async(req, res) => {
-    try{
+router.post('/signin', async (req, res) => {
+    try {
 
-        const { email, password} = req.body;
-        if(!email || !password){
-            return res.status(422).json({error: 'please add email or password'})
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(422).json({ error: 'please add email or password' })
         }
-        const check = await User.findOne({email : email})
-        if(!check){
-            return res.status(422).json({error: 'Invalid Email or Password'})
-        }else{
+        const check = await User.findOne({ email: email })
+        if (!check) {
+            return res.status(422).json({ error: 'Invalid Email or Password' })
+        } else {
+            //compare password using bcrypt.compare
             const comparePassword = await bcrypt.compare(password, check.password);
-            if(comparePassword){
+            if (comparePassword) {
                 // res.json({message: 'succesfulley signed in'})
-                const token = jwt.sign({_id:check._id}, JWT_SECRET)
-                res.json({message: 'successfully signed in', token: token})
+                const token = jwt.sign({ _id: check._id }, JWT_SECRET, { expiresIn: '1h' })
+                res.json({ message: 'successfully signed in', token: token })
 
-            }else{
-            return res.status(422).json({error: 'Invalid Email or Password'})
+            } else {
+                return res.status(422).json({ error: 'Invalid Email or Password' })
             }
         }
-    } catch(error){
+    } catch (error) {
         console.log(error);
-        
+
     }
 
 
